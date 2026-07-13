@@ -1,4 +1,10 @@
-all:
-	$(CROSS_COMPILE)gcc -lpthread -o aesdsocket aesdsocket.c
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS ?= -Wall -Wextra
+LDFLAGS ?= -pthread -lrt
+all: aesdsocket
+
+aesdsocket: aesdsocket.c
+	$(CC) $(CFLAGS) -o aesdsocket aesdsocket.c $(LDFLAGS)
+
 clean:
 	rm -f aesdsocket *.o
