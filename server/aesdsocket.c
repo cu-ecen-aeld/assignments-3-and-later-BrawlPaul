@@ -131,9 +131,7 @@ int main(int argc, char *argv[])
         perror("listen");
         exit(EXIT_FAILURE);
     }
-
-    //open fds
-    fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
+    
 
     pthread_mutex_init(&fd_lock, NULL);
     threadList *curThread;
@@ -156,9 +154,11 @@ int main(int argc, char *argv[])
             char timebuf[64];
             strftime(timebuf, sizeof(timebuf), "%a, %d %b %Y %H:%M:%S %z", &tm_info);
             pthread_mutex_lock(&fd_lock);
+            fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
             fprintf(fileFDs.append_fd, "timestamp:%s\n", timebuf);
             fflush(fileFDs.append_fd);
             pthread_mutex_unlock(&fd_lock);
+            fclose(fileFDs.append_fd);
             alarm(10);
         }
         struct sockaddr_in client_addr;
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         free(curThread);
     }
     close(server_fd);
-    fclose(fileFDs.append_fd);
+    //fclose(fileFDs.append_fd);
     //fclose(fileFDs.readback_fd);
     pthread_mutex_destroy(&fd_lock);
 }
@@ -224,9 +224,10 @@ void *thread_funct(void *fd)
             {
                 size_t chunk_len = (nl - (datBuf + offset)) + 1; // include the '\n'
                 pthread_mutex_lock(&fd_lock);
+                fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
                 fwrite(datBuf + offset, sizeof(uint8_t), chunk_len, fileFDs.append_fd);
                 fflush(fileFDs.append_fd);
-
+                fclose(fileFDs.append_fd);
                 fileFDs.readback_fd = fopen(AESD_SOCKET_DATA_FILE, "r");
                 size_t bytes_read;
                 while ((bytes_read = fread(datBuf_echo, sizeof(uint8_t), BUF_SIZE, fileFDs.readback_fd)) > 0)
@@ -246,8 +247,10 @@ void *thread_funct(void *fd)
             else
             {
                 pthread_mutex_lock(&fd_lock);
+                fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
                 fwrite(datBuf + offset, sizeof(uint8_t), bytes_recv - offset, fileFDs.append_fd);
                 fflush(fileFDs.append_fd);
+                fclose(fileFDs.append_fd);
                 pthread_mutex_unlock(&fd_lock);
                 offset = bytes_recv;
             }
