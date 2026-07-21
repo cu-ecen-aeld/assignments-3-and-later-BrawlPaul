@@ -13,9 +13,15 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <time.h>
 
 #define PORT 9000
 #define BUF_SIZE 1024
+#if USE_AESD_CHAR_DEVICE
+#define AESD_SOCKET_DATA_FILE "/dev/aesdchar"
+#else
+#define AESD_SOCKET_DATA_FILE "/var/tmp/aesdsocketdata"
+#endif
 
 volatile sig_atomic_t terminate = 0;
 volatile sig_atomic_t writeTime = 0;
@@ -127,11 +133,11 @@ int main(int argc, char *argv[])
     }
 
     //open fds
-    fileFDs.append_fd = fopen("/var/tmp/aesdsocketdata", "w");
-    fileFDs.readback_fd = fopen("/var/tmp/aesdsocketdata", "r");
+    fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
 
     pthread_mutex_init(&fd_lock, NULL);
     threadList *curThread;
+    #if !USE_AESD_CHAR_DEVICE
     struct sigaction saTime;
     memset(&saTime, 0, sizeof(saTime));
     saTime.sa_handler = timer_write;
@@ -139,6 +145,7 @@ int main(int argc, char *argv[])
     sa.sa_flags = 0;
     sigaction(SIGALRM, &saTime, NULL);
     alarm(10);
+    #endif
     while (!terminate)
     {
         if (writeTime)
@@ -197,7 +204,7 @@ int main(int argc, char *argv[])
     }
     close(server_fd);
     fclose(fileFDs.append_fd);
-    fclose(fileFDs.readback_fd);
+    //fclose(fileFDs.readback_fd);
     pthread_mutex_destroy(&fd_lock);
 }
 
@@ -220,7 +227,7 @@ void *thread_funct(void *fd)
                 fwrite(datBuf + offset, sizeof(uint8_t), chunk_len, fileFDs.append_fd);
                 fflush(fileFDs.append_fd);
 
-                fseek(fileFDs.readback_fd, 0, SEEK_SET);
+                fileFDs.readback_fd = fopen(AESD_SOCKET_DATA_FILE, "r");
                 size_t bytes_read;
                 while ((bytes_read = fread(datBuf_echo, sizeof(uint8_t), BUF_SIZE, fileFDs.readback_fd)) > 0)
                 {
@@ -232,6 +239,7 @@ void *thread_funct(void *fd)
                         total_written += n;
                     }
                 }
+                fclose(fileFDs.readback_fd);
                 pthread_mutex_unlock(&fd_lock);
                 offset += chunk_len;
             }

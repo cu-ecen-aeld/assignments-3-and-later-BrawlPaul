@@ -9,10 +9,11 @@
  */
 
 #include <stddef.h>
-#include <stdint.h>
 #ifdef __KERNEL__
+#include <linux/types.h>
 #include <linux/string.h>
 #else
+#include <stdint.h>
 #include <string.h>
 #endif
 
@@ -34,12 +35,15 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     /**
     * TODO: implement per description
     */
+    size_t charPos;
+    uint8_t entryIndex;
+    struct aesd_buffer_entry *curEntry;
     if (!(buffer->full) && (buffer->in_offs == buffer->out_offs)) {
         return NULL;
     }
-    size_t charPos = 0;
-    uint8_t entryIndex = buffer->out_offs;
-    struct aesd_buffer_entry *curEntry = &((buffer->entry)[buffer->out_offs]);
+    charPos = 0;
+    entryIndex = buffer->out_offs;
+    curEntry = &((buffer->entry)[buffer->out_offs]);
     for(;;) {
         if ((charPos + curEntry->size) > char_offset)
         {
@@ -64,21 +68,30 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 * Any necessary locking must be handled by the caller
 * Any memory referenced in @param add_entry must be allocated by and/or must have a lifetime managed by the caller.
 */
-void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
+const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 {
     /**
     * TODO: implement per description
     */
-    memcpy(&((buffer->entry)[buffer->in_offs]), add_entry, sizeof(struct aesd_buffer_entry));
-    buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    const char *retVal;
     if (buffer->full)
     {
+        retVal = (buffer->entry)[buffer->in_offs].buffptr;
+        memcpy(&((buffer->entry)[buffer->in_offs]), add_entry, sizeof(struct aesd_buffer_entry));
+        buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
         buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
-    else if (buffer->in_offs == buffer->out_offs)
+    else 
     {
-        buffer->full = true;
+        retVal = NULL;
+        memcpy(&((buffer->entry)[buffer->in_offs]), add_entry, sizeof(struct aesd_buffer_entry));
+        buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+        if (buffer->in_offs == buffer->out_offs)
+        {
+            buffer->full = true;
+        }
     }
+    return retVal;
 }
 
 /**

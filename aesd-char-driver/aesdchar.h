@@ -8,6 +8,7 @@
 #ifndef AESD_CHAR_DRIVER_AESDCHAR_H_
 #define AESD_CHAR_DRIVER_AESDCHAR_H_
 
+#include <stddef.h>
 #define AESD_DEBUG 1  //Remove comment on this line to enable debug
 
 #undef PDEBUG             /* undef it, just in case */
@@ -25,10 +26,14 @@
 
 struct aesd_dev
 {
-    /**
+     /**
      * TODO: Add structure(s) and locks needed to complete assignment requirements
      */
-    struct cdev cdev;     /* Char device structure      */
+     struct aesd_circular_buffer *buffer;
+     uint8_t *writeScratch;
+     size_t scratchSize;
+     struct mutex lock;
+     struct cdev cdev;     /* Char device structure      */
 };
 
 
