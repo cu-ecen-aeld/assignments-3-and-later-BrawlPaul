@@ -8,7 +8,6 @@
  *
  */
 
-#include <stddef.h>
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/string.h>
