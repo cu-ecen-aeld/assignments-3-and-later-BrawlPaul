@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
             char timebuf[64];
             strftime(timebuf, sizeof(timebuf), "%a, %d %b %Y %H:%M:%S %z", &tm_info);
             pthread_mutex_lock(&fd_lock);
-            fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
+            fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "a");
             fprintf(fileFDs.append_fd, "timestamp:%s\n", timebuf);
             fflush(fileFDs.append_fd);
             pthread_mutex_unlock(&fd_lock);
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
             {
                 break;
             }
-            perror("accept");
+            //perror("accept");
             continue;
         }
         if (threads == NULL)
@@ -224,7 +224,7 @@ void *thread_funct(void *fd)
             {
                 size_t chunk_len = (nl - (datBuf + offset)) + 1; // include the '\n'
                 pthread_mutex_lock(&fd_lock);
-                fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
+                fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "a");
                 fwrite(datBuf + offset, sizeof(uint8_t), chunk_len, fileFDs.append_fd);
                 fflush(fileFDs.append_fd);
                 fclose(fileFDs.append_fd);
@@ -247,7 +247,7 @@ void *thread_funct(void *fd)
             else
             {
                 pthread_mutex_lock(&fd_lock);
-                fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "w");
+                fileFDs.append_fd = fopen(AESD_SOCKET_DATA_FILE, "a");
                 fwrite(datBuf + offset, sizeof(uint8_t), bytes_recv - offset, fileFDs.append_fd);
                 fflush(fileFDs.append_fd);
                 fclose(fileFDs.append_fd);
